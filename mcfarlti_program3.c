@@ -19,9 +19,10 @@
 #include <fcntl.h>
 
 // input length is counted 1 more than 2048 to account for the \n which must be removed
-#define MAX_INPUT_LENGTH 2049
-#define MAX_ARGS 512
-#define	MAX_BGRND 300
+#define MAX_INPUT_LENGTH	2049
+#define MAX_ARGS			512
+#define	MAX_BGRND			300
+#define OCTOTHORP			35		// this is the ASCII value of the symbol '#'
 
 /* 
 //    Parse each line which is comma separated and create
@@ -435,6 +436,8 @@ struct userCmds* cmdLine(char* userInput)
 
 		if (strcmp(token, ">") == 0) {
 
+			// handle the case where '>' is the last item so it doesn't Segfault
+
 			// goes to the token afer the '>' and assigns that to the file name
 			//	to be created
 			token = strtok(NULL, " ");
@@ -449,6 +452,9 @@ struct userCmds* cmdLine(char* userInput)
 		}
 
 		else if (strcmp(token, "<") == 0) {
+
+			// handle the case where '<' isn't the last item so it doesn't Segfault
+
 			// goes to the token afer the '<' and assigns that to the file name
 			//	to be output to
 			token = strtok(NULL, " ");
@@ -472,6 +478,17 @@ struct userCmds* cmdLine(char* userInput)
 		token = strtok(NULL, " ");
 	}
 
+	// this checks to see if the last item in the input is the &
+	//	if it is, then the user has requested a background process
+	if (strcmp(allUserCmds->arrayOfArgs[j - 1], "&") == 0) {
+		allUserCmds->background = true;
+	}
+
+	// test statements
+	printf("the last item in the array is: %s\n", allUserCmds->arrayOfArgs[j - 1]);
+
+	printf("%s", allUserCmds->background ? "true" : "false");
+
 	printf("The array you input is:\n");
 
 	for (int k = 0; k < j; k++) {
@@ -479,6 +496,7 @@ struct userCmds* cmdLine(char* userInput)
 	}
 
 	printf("\n");
+	// end of test statements
 
 	// if the character '&' is the last item in the arguments
 			// make this a background process
@@ -522,6 +540,11 @@ char* getUserInput() {
 	//	and pointing the access point to the stdin
 	fgets(userInput, MAX_INPUT_LENGTH, stdin);
 
+	// check to see if the input is just \n
+	if (strcmp(userInput, "\n") == 0) {
+		return userInput;
+	}
+
 	// remove the '\n' character from the command line input
 	strSize = strlen(userInput);
 	userInput[strSize - 1] = '\0';
@@ -532,15 +555,28 @@ char* getUserInput() {
 int main()
 {
 	char* userArgs = malloc(MAX_INPUT_LENGTH);
+	char poundAscii[5];
 	
 	while (true) {
 
 		// must be passed to convert to integer
 		userArgs = getUserInput();
 
-		printf("the length is: %d\n", sizeof(userArgs));
+		// if the string is an empty line, go back to get input
+		if (strcmp(userArgs, "\n") == 0) {
+			continue;
+		}
 
-		// create a struct of the user input
+		// convert the first character to an ASCII character
+		//	if it is the symbol '#' then this is a comment
+		sprintf(poundAscii, "%c", userArgs[0]);
+
+		if (strcmp(poundAscii, "#") == 0) {
+			continue;
+		}
+
+		// create a struct of the user input if it is not an empty line
+		//	or if it doesn't start with #
 		struct userCmds* catcher = cmdLine(userArgs);
 				
 		// if the user types in "exit" this will leave the program.
