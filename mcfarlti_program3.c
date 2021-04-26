@@ -23,16 +23,6 @@
 #define MAX_ARGS 512
 #define	MAX_BGRND 300
 
-// struct for movie information
-//struct movie
-//{
-//    char*   title;
-//    int     year;
-//    char*   languages;
-//    double  rating;
-//    struct  movie* next;
-//};
-//
 /* 
 //    Parse each line which is comma separated and create
 //    a struct of each movie.
@@ -404,6 +394,122 @@
 //    return 0;
 //}
 
+// struct for user command
+struct userCmds
+{
+	char*	arrayOfArgs[MAX_ARGS];	// holds all the arguments in an array
+	char*	fInput;					// holds the name of the input file
+	char*	fOutput;				// holds the name of the output file
+	bool	background;				// determines if the item is a background process or not (determined by ending &)
+	bool	ioRedirect;				// determines if there is I/O redirect needed (may not need)
+};
+
+struct userCmds* cmdLine(char* userInput)
+{
+
+	// this will advance the array that items will be added to
+	int j = 0;
+
+    // the struct must have memory allocated for it
+    struct userCmds *allUserCmds = malloc(sizeof(struct userCmds));
+
+    // initializes the token
+    char* token = strtok(userInput, " ");
+
+	// initialize all struct variables
+	for (int i = 0; i < MAX_ARGS; i++) {
+		allUserCmds->arrayOfArgs[i] = NULL;
+	}
+	allUserCmds->fInput = NULL;
+	allUserCmds->fOutput = NULL;
+	allUserCmds->background = false;
+	allUserCmds->ioRedirect = false;
+
+	while (token != NULL) {
+		allUserCmds->arrayOfArgs[j] = calloc(strlen(token) + 1, sizeof(char));
+		allUserCmds->fInput = calloc(strlen(token) + 1, sizeof(char));
+		allUserCmds->fOutput = calloc(strlen(token) + 1, sizeof(char));
+		strcpy(allUserCmds->arrayOfArgs[j], token);
+
+		printf("array position %d is %s\n", j, allUserCmds->arrayOfArgs[j]);
+
+		if (strcmp(token, ">") == 0) {
+
+			// goes to the token afer the '>' and assigns that to the file name
+			//	to be created
+			token = strtok(NULL, " ");
+			strcpy(allUserCmds->fInput, token);
+			printf("the input file is: %s\n", allUserCmds->fInput);
+
+			// increment the array counter, allocate the memory for that location
+			//	and copy that item to the array
+			j++;
+			allUserCmds->arrayOfArgs[j] = calloc(strlen(token) + 1, sizeof(char));
+			strcpy(allUserCmds->arrayOfArgs[j], token);
+		}
+
+		else if (strcmp(token, "<") == 0) {
+			// goes to the token afer the '<' and assigns that to the file name
+			//	to be output to
+			token = strtok(NULL, " ");
+			strcpy(allUserCmds->fOutput, token);
+
+			printf("the output file is: %s\n", allUserCmds->fOutput);
+
+			// increment the array counter, allocate the memory for that location
+			//	and copy that item to the array
+			j++;
+			allUserCmds->arrayOfArgs[j] = calloc(strlen(token) + 1, sizeof(char));
+			strcpy(allUserCmds->arrayOfArgs[j], token);
+		}
+
+		else if (strcmp(token, "&") == 0) {
+			printf("Hey, look at that, you have an &\n");
+		}
+
+		// moves to the next array position and the next item to be tokenized
+		j++;
+		token = strtok(NULL, " ");
+	}
+
+	printf("The array you input is:\n");
+
+	for (int k = 0; k < j; k++) {
+		printf("%s ", allUserCmds->arrayOfArgs[k]);
+	}
+
+	printf("\n");
+
+	// if the character '&' is the last item in the arguments
+			// make this a background process
+	
+	// if > is in the arguments, and is surrounded 
+
+	// if # is the first item in the input, do nothing
+
+	// if the line is empty, do nothing
+
+	// if < is found, then the next item in the array will be an input file
+
+	// if > is found, then the next item in the array will be an output file
+				
+    // The second token is the year of the movie's release
+    //token = strtok_r(NULL, ",", &saveptr);
+    //int yearNum = atoi(token);
+    //currMovie->year = yearNum;
+
+    //// The third token is the languages
+    //token = strtok_r(NULL, ",", &saveptr);
+    //currMovie->languages = calloc(strlen(token) + 1, sizeof(char));
+    //strcpy(currMovie->languages, token);
+
+    //// The fourth token is the rating
+    //token = strtok_r(NULL, "\n", &saveptr);
+    //currMovie->rating = strtod(token, &saveptr);
+
+    return allUserCmds;
+}
+
 char* getUserInput() {
 	char* userInput = calloc(MAX_INPUT_LENGTH, sizeof(char));
 	int strSize;
@@ -432,8 +538,11 @@ int main()
 		// must be passed to convert to integer
 		userArgs = getUserInput();
 
-		printf("%s\n", userArgs);
-		
+		printf("the length is: %d\n", sizeof(userArgs));
+
+		// create a struct of the user input
+		struct userCmds* catcher = cmdLine(userArgs);
+				
 		// if the user types in "exit" this will leave the program.
 		if (strcmp(userArgs, "exit") == 0) {
 			// TO DO: End all processes
