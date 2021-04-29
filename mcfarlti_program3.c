@@ -17,6 +17,7 @@
 #include <unistd.h>
 #include <time.h>
 #include <fcntl.h>
+#include <sys/wait.h>
 
 // input length is counted 1 more than 2048 to account for the \n which must be removed
 #define MAX_INPUT_LENGTH	2049
@@ -34,21 +35,23 @@
 //* each line of the stated csv file
 //*/
 
-// prototype declarations
-char* moneyCheck(char* token);
-char* expandTheMoney(char* varToExpand);
-char* truncateMoney(char* varWithMoney);
-
 
 // struct for user command
 struct userCmds
 {
-	char*	arrayOfArgs[MAX_ARGS];	// holds all the arguments in an array
-	char*	fInput;					// holds the name of the input file
-	char*	fOutput;				// holds the name of the output file
+	char* arrayOfArgs[MAX_ARGS];	// holds all the arguments in an array
+	char* fInput;					// holds the name of the input file
+	char* fOutput;				// holds the name of the output file
 	bool	background;				// determines if the item is a background process or not (determined by ending &)
 	bool	ioRedirect;				// determines if there is I/O redirect needed (may not need)
 };
+
+// prototype declarations
+struct userCmds* cmdLine(char* userInput);
+char* moneyCheck(char* token);
+char* expandTheMoney(char* varToExpand);
+char* truncateMoney(char* varWithMoney);
+void theForkParty(struct userCmds* cmdStruct);
 
 struct userCmds* cmdLine(char* userInput)
 {
@@ -73,31 +76,24 @@ struct userCmds* cmdLine(char* userInput)
 
 	while (token != NULL) {
 
+
 		// alocate memory
 		allUserCmds->arrayOfArgs[j] = calloc(strlen(token) + 1, sizeof(char));
 		allUserCmds->fInput = calloc(strlen(token) + 1, sizeof(char));
 		allUserCmds->fOutput = calloc(strlen(token) + 1, sizeof(char));
-		char* moneyCatcher = calloc(strlen(token) + 1, sizeof(char));
+		char* expandedVar = calloc(strlen(token) + 1, sizeof(char));
 		char* postMoney = calloc(strlen(token) + 1, sizeof(char));
 
 
-
-		printf("this token is %s\n\n", token);
-
 		strcpy(postMoney, token);
 
-		printf("\npostMoney is: %s\n", postMoney);
-
-		// check to see if there are any $'s found
-		moneyCatcher = moneyCheck(postMoney);
-
-		strcpy(allUserCmds->arrayOfArgs[j], token);
+		// check to see if there are any $$'s found and add to the array
+		expandedVar = moneyCheck(postMoney);
+		strcpy(allUserCmds->arrayOfArgs[j], expandedVar);
 
 		//printf("array position %d is %s\n", j, allUserCmds->arrayOfArgs[j]);
 
 		if (strcmp(token, ">") == 0) {
-
-			// handle the case where '>' is the last item so it doesn't Segfault
 
 			// goes to the token afer the '>' and assigns that to the file name
 			//	to be created
@@ -106,25 +102,27 @@ struct userCmds* cmdLine(char* userInput)
 			// this is a catch in case the last item in the argument is a > symbol
 			//	so there is no segFault
 			if (token == NULL) {
+				printf("ERROR: You cannot end with the > command");
 				continue;
 			}
 
+			strcpy(postMoney, token);
+			expandedVar = moneyCheck(postMoney);
+
 			// assigns output file
-			strcpy(allUserCmds->fOutput, token);
+			strcpy(allUserCmds->fOutput, expandedVar);
 			printf("the ouput file is: %s\n", allUserCmds->fOutput);
 
 			// increment the array counter, allocate the memory for that location
 			//	and copy that item to the array
 			j++;
-			allUserCmds->arrayOfArgs[j] = calloc(strlen(token) + 1, sizeof(char));
+			allUserCmds->arrayOfArgs[j] = calloc(strlen(expandedVar) + 1, sizeof(char));
 
 			// adds item to argument array
-			strcpy(allUserCmds->arrayOfArgs[j], token);
+			strcpy(allUserCmds->arrayOfArgs[j], expandedVar);
 		}
 
 		else if (strcmp(token, "<") == 0) {
-
-			// handle the case where '<' isn't the last item so it doesn't Segfault
 
 			// goes to the token afer the '<' and assigns that to the file name
 			//	to be output to
@@ -133,22 +131,22 @@ struct userCmds* cmdLine(char* userInput)
 			// this is a catch in case the last item in the argument is a > symbol
 			//	so there is no segFault
 			if (token == NULL) {
+				printf("ERROR: You cannot end with the < command");
 				continue;
 			}
 
-			strcpy(allUserCmds->fInput, token);
+			strcpy(postMoney, token);
+			expandedVar = moneyCheck(postMoney);
+
+			strcpy(allUserCmds->fInput, expandedVar);
 
 			printf("the input file is: %s\n", allUserCmds->fInput);
 
 			// increment the array counter, allocate the memory for that location
 			//	and copy that item to the array
 			j++;
-			allUserCmds->arrayOfArgs[j] = calloc(strlen(token) + 1, sizeof(char));
-			strcpy(allUserCmds->arrayOfArgs[j], token);
-		}
-
-		else if (strcmp(token, "&") == 0) {
-			printf("Hey, look at that, you have an &\n");
+			allUserCmds->arrayOfArgs[j] = calloc(strlen(expandedVar) + 1, sizeof(char));
+			strcpy(allUserCmds->arrayOfArgs[j], expandedVar);
 		}
 
 		// moves to the next array position and the next item to be tokenized
@@ -200,6 +198,7 @@ char* truncateMoney(char* varWithMoney) {
 
 	strcpy(truncMoney, varWithMoney);
 
+	// truncate, starting with the first $.
 	truncMoney[index] = '\0';
 
 	return truncMoney;
@@ -213,6 +212,7 @@ char* expandTheMoney(char* varToExpand) {
 	char* expansionFinalForm = malloc(MAX_INPUT_LENGTH);
 	int expansions = 0;
 
+	// find all instances of the charracter $
 	for (int i = 0; i < (strlen(varToExpand)); i++) {
 		if (varToExpand[i] == '$') {
 			moneyCounter++;
@@ -222,6 +222,7 @@ char* expandTheMoney(char* varToExpand) {
 	// truncate all of the $ off of the variable
 	expansionHolder = truncateMoney(varToExpand);
 	
+	// find out how many times to add pid of shell
 	expansions = (moneyCounter / 2);
 
 	// get the string version of the process ID
@@ -246,9 +247,11 @@ char* moneyCheck(char *token) {
 	char* nextToLastChar = malloc(5);
 	char* varExpansion = malloc(MAX_INPUT_LENGTH);
 
+	// find the last character and the second to last character
 	sprintf(lastChar, "%c", token[strlen(token) - 1]);
 	sprintf(nextToLastChar, "%c", token[strlen(token) - 2]);
 
+	// if the last two characters are $$, then do the variable expansion
 	if ((strcmp(lastChar, "$") == 0) && (strcmp(nextToLastChar, "$") == 0)) {
 		varExpansion = expandTheMoney(token);
 		return varExpansion;
@@ -282,12 +285,89 @@ char* getUserInput() {
 	return userInput;
 }
 
+/*
+theForkParty is modified from explorations
+*/
+void theForkParty(struct userCmds* cmdStruct) {
+
+	// -5 is simply a holder value
+	pid_t childPid = -5;
+	pid_t spawnpid = -5;
+
+	int pidWait;
+
+	// If fork is successful, the value of spawnpid will be 0 in the child, the child's pid in the parent
+	spawnpid = fork();
+	switch (spawnpid) {
+	case -1:
+		// Code in this branch will be exected by the parent when fork() fails and the creation of child process fails as well
+		perror("fork() failed!");
+		exit(1);
+		break;
+	case 0:
+
+		if (cmdStruct->ioRedirect) {
+			// setup IO, then exec
+			// check and redirect the file
+			// then exec
+			// use dup2() read on the manpage
+		}
+
+		execvp(cmdStruct->arrayOfArgs[0], cmdStruct->arrayOfArgs);
+			// there is redirect
+		// spawnpid is 0. This means the child will execute the code in this branch
+		
+		// setup file redirection, and execute
+			// file IO stuff and executing
+			// open(psTwo);
+				// if this is a -1, then this is a failure
+				
+			// dup2() redirects to a file descriptor
+		// write function
+			// takes user commands
+
+			// checks for redirection
+
+			// if redirection, open file for reading/writing and use dup2() to redirect to that file descriptor
+				// hint: look at man pages
+
+			// FIRST - open file
+			// THEN use dup2 to redirect
+
+			// if you have "ls &", you should have that sent to dev/null
+				// If the user doesn't redirect the standard input for a background command, then standard input should be redirected to /dev/null
+				// If the user doesn't redirect the standard output for a background command, then standard output should be redirected to /dev/null
+				// THIS IS WHERE YOU WILL REDIRECT ANYTHING THAT DOESN'T HAVE AN INPUT OR OUTPUT FILE. use dup2() and send to /dev/null **********
+
+		// you'll need to use open(file, 0700)
+
+		// here, you do stuff with your signals
+
+		break;
+	default:
+		// spawnpid is the pid of the child. This means the parent will execute the code in this branch
+
+		// this is the standard wait process and this will be in the foreground
+		if (cmdStruct->background) {
+			// keep track of this with an array
+			// that way you can kill the zombies of your background processes
+			childPid = waitpid(spawnpid, &pidWait, WNOHANG);
+		}
+
+		else {
+			childPid = waitpid(spawnpid, &pidWait, 0);
+		}
+
+		// !!!!!!!!!!!! this is to ensure that a background process occurs
+		break;
+	}
+	
+}
+
 int main()
 {
 	char* userArgs = malloc(MAX_INPUT_LENGTH);
 	char poundAscii[5];
-
-	printf("pid is %d", getpid());
 	
 	while (true) {
 
@@ -303,45 +383,46 @@ int main()
 		//	if it is the symbol '#' then this is a comment
 		sprintf(poundAscii, "%c", userArgs[0]);
 
+		// if the first character is a #, treat it as a comment
 		if (strcmp(poundAscii, "#") == 0) {
 			continue;
 		}
 
 		// create a struct of the user input if it is not an empty line
 		//	or if it doesn't start with #
-		struct userCmds* catcher = cmdLine(userArgs);
-				
+		struct userCmds* cmdStruct = cmdLine(userArgs);
+
+		// Changing of directory
+		if (strcmp(cmdStruct->arrayOfArgs[0], "cd") == 0) {
+			printf("looks like you have a CD there bro\n\n");
+
+			if (cmdStruct->arrayOfArgs[1] == NULL) {
+				chdir(getenv("HOME"));
+			}
+
+			else {
+				chdir(cmdStruct->arrayOfArgs[1]);
+				//printf("The command is %s\n\n", cmdStruct->arrayOfArgs[1]);
+			}
+		}
+
+		else if (strcmp(cmdStruct->arrayOfArgs[0], "status") == 0) {
+			printf("status is here\n\n");
+		}
+
 		// if the user types in "exit" this will leave the program.
-		if (strcmp(userArgs, "exit") == 0) {
+		else if (strcmp(userArgs, "exit") == 0) {
 			// TO DO: End all processes
 			break;
 		}
+
+		else {
+			theForkParty(cmdStruct);
+
+			// if background process is done - KILL IT!!!!!
+		}
 	}
 	free(userArgs);
-	//pid_t spawnpid = -5;
-	//int intVal = 10;
-	//// If fork is successful, the value of spawnpid will be 0 in the child, the child's pid in the parent
-	//spawnpid = fork();
-	//switch (spawnpid) {
-	//case -1:
-	//	// Code in this branch will be exected by the parent when fork() fails and the creation of child process fails as well
-	//	perror("fork() failed!");
-	//	exit(1);
-	//	break;
-	//case 0:
-	//	// spawnpid is 0. This means the child will execute the code in this branch
-	//	intVal = intVal + 1;
-	//	printf("I am the child! intVal = %d\n", intVal);
-	//	printf("The pid of the child is %d\n", getpid());
-	//	break;
-	//default:
-	//	// spawnpid is the pid of the child. This means the parent will execute the code in this branch
-	//	intVal = intVal - 1;
-	//	printf("I am the parent! ten = %d\n", intVal);
-	//	printf("The pid of the parent is %d\n", getpid());
-	//	break;
-	//}
-	//printf("This will be executed by both of us!\n");
-
+	
     return EXIT_SUCCESS;
 }
