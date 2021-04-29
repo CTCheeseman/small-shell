@@ -28,372 +28,17 @@
 //    Parse each line which is comma separated and create
 //    a struct of each movie.
 //*/
-//struct movie* createMovie(char* currLine)
-//{
-//
-//    // the struct must have memory allocated for it
-//    struct movie* currMovie = malloc(sizeof(struct movie));
-//
-//    char* saveptr;
-//
-//    // The first token is the title of the movie
-//    char* token = strtok_r(currLine, ",", &saveptr);
-//    currMovie->title = calloc(strlen(token) + 1, sizeof(char));
-//    strcpy(currMovie->title, token);
-//
-//    // The second token is the year of the movie's release
-//    token = strtok_r(NULL, ",", &saveptr);
-//    int yearNum = atoi(token);
-//    currMovie->year = yearNum;
-//
-//    // The third token is the languages
-//    token = strtok_r(NULL, ",", &saveptr);
-//    currMovie->languages = calloc(strlen(token) + 1, sizeof(char));
-//    strcpy(currMovie->languages, token);
-//
-//    // The fourth token is the rating
-//    token = strtok_r(NULL, "\n", &saveptr);
-//    currMovie->rating = strtod(token, &saveptr);
-//
-//    // Set the next node to NULL
-//    currMovie->next = NULL;
-//
-//    return currMovie;
-//}
-//
+
 /*
 //* Return a linked list of movies by parsing data from
 //* each line of the stated csv file
 //*/
-//struct movie* processFile(char* filePath)
-//{
-//    // Open the csv file as a read
-//    FILE* movieFile = fopen(filePath, "r");
-//
-//    char* currLine = NULL;
-//    size_t len = 0;
-//    ssize_t nread;
-//
-//    // The head of the linked list
-//    struct movie* head = NULL;
-//
-//    // The tail of the linked list
-//    struct movie* tail = NULL;
-//
-//    // Read the .csv file line by line
-//    while ((nread = getline(&currLine, &len, movieFile)) != -1)
-//    {
-//        // Get a new movie node corresponding to the current line
-//        struct movie* newNode = createMovie(currLine);
-//
-//        if (head == NULL)
-//        {
-//            // If this is the first node in the linked list
-//            //  treat it as though it is the only item in the list
-//            head = newNode;
-//            tail = newNode;
-//        }
-//        else
-//        {
-//            // Otherwise, if this is not the first item in the linked list
-//            // Add this node to the end of the list and advance it to the next item
-//            tail->next = newNode;
-//            tail = newNode;
-//        }
-//    }
-//    free(currLine);
-//    fclose(movieFile);
-//    return head;
-//}
-//
-//void outputMovieByYear(struct movie* list, int year, char* dirName)
-//{
-//    /*
-//    outputMovieByYear has no return value. if the year is found in the .csv file, then a file is created
-//        with the name YYYY.txt, and each of the movies that exist for that year are output to the file.
-//        There will be n files made for n amount of years in the .csv file. All files are placed in the
-//        dirName directory (which is accessible from the root) and each of the files will have permissions
-//        of '-rw-r-----'
-//    */
-//    
-//    int yearCounter = 0;
-//    char* tempYearText = malloc(MAX_SIZE);
-//    char* movieTitle = malloc(MAX_SIZE);
-//    char* outputDir = malloc(MAX_SIZE);
-//    char* fileLocation = malloc(MAX_SIZE);
-//    FILE* fPointer;
-//    char tempDirName[25];
-//    char tempName[MAX_SIZE] = { "./" };
-//
-//    // find if the year has any movies in it -- if it does, have this year print out ONCE, then create a file with this name
-//
-//    while (list != NULL)
-//    {
-//
-//        if (year == list->year)
-//        {
-//            // if the movie year matches the input, print the movie title
-//            yearCounter++;
-//
-//            if (yearCounter == 1) {
-//
-//                // create it so 'directory_name' becomes './directory_name'
-//                strcpy(tempDirName, dirName);
-//                strcat(tempName, tempDirName);
-//                strcpy(outputDir, tempName);
-//
-//                // change the directory to the new directory
-//                chdir(outputDir);
-//
-//                // convert the year to a string, and add .txt to it
-//                sprintf(tempYearText, "%d", year);
-//
-//                // concatenate the number to the directory prefix name
-//                strcat(tempYearText, ".txt");
-//                fPointer = fopen(tempYearText, "w");
-//            }
-//
-//            strcpy(movieTitle, list->title);
-//            strcat(movieTitle, "\n");
-//            fprintf(fPointer, movieTitle);
-//        }
-//
-//        // move to the next node in the list
-//        list = list->next;
-//    }
-//
-//    if (yearCounter > 0)
-//    {
-//        fclose(fPointer);
-//
-//        // change the most recent file to rw-r-----
-//        chmod(tempYearText, 0640);
-//
-//        // return to the parent directory
-//        chdir("..");
-//    }
-//    free(movieTitle);
-//    free(tempYearText);
-//    free(outputDir);
-//    free(fileLocation);
-//}
-//
-//void yearLooper(struct movie* list, char* dirName) {
-//
-//        /* 
-//        iterates through a list of all years that movies have existed
-//            calls printMovieByRating, which prints out the highest
-//            rated movie for each year searched
-//        */
-//    
-//        // 1888 is the first year a movie was created
-//        // have a buffer to go through 2025
-//        int firstMovie = 1885;
-//        int currentYear = 2025;
-//    
-//        // print the highest rated movie that year
-//        for (int eachYear = firstMovie; eachYear <= currentYear; eachYear++)
-//        {
-//            outputMovieByYear(list, eachYear, dirName);
-//        }
-//    
-//}
-//
-//int isCsv(char* fileName) {
-//    /*
-//    Helper function that determines if the file extension is a .csv
-//        worked directly with Michael Slater to develop this function
-//    */
-//    char* dot = strrchr(fileName, '.');
-//
-//    if (dot != NULL && (strcmp(dot, ".csv") == 0)) {
-//        return 1;
-//    }
-//    return 0;
-//}
-//
-//char* findSizeOfFiles(int choice) {
-//    /*
-//    Parts of this method is modified from the Directories Exploration from Module 3. 
-//
-//    This method goes through each file in the root directory and does several things. If the choice
-//        is 1, this will find the largest .csv file in the root directory.
-//        If the choice is 2, this will find the smallest .csv file in the root directory.
-//        This will return the name of smallest or largest file based on the user choice.
-//    */
-//
-//    // Open the current directory
-//    DIR* currDir = opendir(".");
-//    struct dirent* eachDir;
-//    size_t fileSize;
-//    struct stat dirStat;
-//    char* fileName = malloc(MAX_SIZE);
-//
-//    // initialize fileSize
-//    fileSize = 0;
-//
-//    // Go through all the entries
-//    while ((eachDir = readdir(currDir)) != NULL) {
-//
-//        // checks to see if the name of the file starts with "movies_"
-//        if ((strncmp(PREFIX, eachDir->d_name, strlen(PREFIX)) == 0) && isCsv(eachDir->d_name) == 1) {
-//
-//            stat(eachDir->d_name, &dirStat);
-//
-//            // this is for the first time that the files are passed
-//            if (fileSize == 0) {
-//                fileSize = dirStat.st_size;
-//                memset(fileName, '\0', MAX_SIZE);
-//                strcpy(fileName, eachDir->d_name);
-//            }
-//
-//            // if the user wants to pick the largest file
-//            if (choice == 1) {
-//                // if the size of the file is larger than the previous, set the item
-//                if (dirStat.st_size > fileSize) {
-//                    fileSize = dirStat.st_size;
-//                    memset(fileName, '\0', MAX_SIZE);
-//                    strcpy(fileName, eachDir->d_name);
-//                }
-//            }
-//
-//            // if the user wants to pick the smallest file
-//            else if (choice == 2) {
-//                // if the size of the file is smaller than the previous, set the item
-//                if (dirStat.st_size < fileSize) {
-//                    fileSize = dirStat.st_size;
-//                    memset(fileName, '\0', MAX_SIZE);
-//                    strcpy(fileName, eachDir->d_name);
-//                }
-//            }
-//        }
-//    }
-//
-//    // Close the directory
-//    closedir(currDir);
-//   // printf("the name of the file is: %s and the size of the file is %d\n", fileName, fileSize);
-//    return fileName;
-//}
-//
-//char* generateDirectoryName (void) {
-//
-//    /*
-//    This method generates a name for the directory by creating a random number,
-//        concatenating that random number with "mcfarlti.movies." and then creating
-//        that directory within the root folder. If the directory is created, then
-//        the name of the directory is returned. Otherwise the word "FAILED" is returned
-//    */
-//
-//    int randNum;
-//    int dirResponse;
-//    char numName[25];   
-//    char* noSuccess = malloc(10);
-//    char temporaryName[MAX_SIZE] = { "mcfarlti.movies." };
-//    char* directoryName = malloc(MAX_SIZE);
-//
-//    noSuccess = "FAILED";
-//
-//    // seed a random number using current time
-//    srand(time(0));
-//
-//    // restrict random number to 99,999 as max
-//    randNum = (rand() % MAX_RAND);
-//
-//    // convert random number to a string
-//    sprintf(numName, "%d", randNum);
-//
-//    // concatenate the number to the directory prefix name
-//    strcat(temporaryName, numName);
-//    strcpy(directoryName, temporaryName);
-//
-//    // attemps to make the directory, if this fails, -1 will be 
-//    //  the return value of mkdir
-//    dirResponse = mkdir(directoryName, 0750);
-//
-//    if (dirResponse == -1) {
-//        return noSuccess;
-//    }
-//
-//    return directoryName;
-//}
-//
-//int verifyFileName(char* fileName) {
-//
-//    /*
-//    This method checks to see if the file exists. If it does, 0 is returned
-//        if the file is not found in the root folder, then -1 is returned
-//    */
-//
-//    DIR* currDir = opendir(".");
-//    struct dirent* eachDir;
-//
-//    // Go through all the entries
-//    while ((eachDir = readdir(currDir)) != NULL) {
-//
-//        // checks to see the the name of the input is an existing file
-//        if ((strncmp(fileName, eachDir->d_name, strlen(eachDir->d_name)) == 0)) {
-//
-//            closedir(currDir);
-//            return 0;
-//        }
-//    }
-//
-//    closedir(currDir);
-//    return -1;
-//}
-//
-//int executeUserChoice(int choice, char* fileName) {
-//    /*
-//    This will only occur if the user choice is 1 or 2. If the user choice is 1,
-//        The largest .csv file will be found. If it is 2, the smallest will be found
-//        The directory is also created and all of the file is processed and 
-//        output as .txt files from sub-methods called here.
-//    */
-//
-//    char* nameOfFile = malloc(MAX_SIZE);
-//    char* directoryName = malloc(MAX_SIZE);
-//
-//    // first, if the user choice is 3, check to see if file exists
-//    if (choice == 3) {
-//        if (verifyFileName(fileName) == 0) {
-//            nameOfFile = fileName;
-//        }
-//        else if (verifyFileName(fileName) != 0) {
-//            return -1;
-//        }
-//    }
-//
-//    // first, create the directory
-//    directoryName = generateDirectoryName();
-//
-//    // if the directory nanme fails, try again
-//    if (strcmp(directoryName, "FAILED") == 0) {
-//        directoryName = generateDirectoryName();
-//    }
-//
-//    if (choice == 1 || choice == 2) {
-//        // find the name of the file to be processed
-//        nameOfFile = findSizeOfFiles(choice);
-//    }
-//
-//    // create the struct from the .csv that was found
-//    struct movie* list = processFile(nameOfFile);
-//
-//    // loop through each year and create files for movies found
-//    //  insert the files in the directory created
-//    yearLooper(list, directoryName);
-//
-//    // show to the user that there was success
-//    printf("\nNow processing the chosen file named: %s", nameOfFile);
-//    printf("\nCreated directory with the name: %s\n", directoryName);
-//
-//    // unallocate nameOfFile if the file isn't reassigned to fileName
-//    if (choice == 1 || choice == 2) {
-//        free(nameOfFile);
-//    }
-//    free(directoryName);
-//    return 0;
-//}
+
+// prototype declarations
+char* moneyCheck(char* token);
+char* expandTheMoney(char* varToExpand);
+char* truncateMoney(char* varWithMoney);
+
 
 // struct for user command
 struct userCmds
@@ -427,12 +72,28 @@ struct userCmds* cmdLine(char* userInput)
 	allUserCmds->ioRedirect = false;
 
 	while (token != NULL) {
+
+		// alocate memory
 		allUserCmds->arrayOfArgs[j] = calloc(strlen(token) + 1, sizeof(char));
 		allUserCmds->fInput = calloc(strlen(token) + 1, sizeof(char));
 		allUserCmds->fOutput = calloc(strlen(token) + 1, sizeof(char));
+		char* moneyCatcher = calloc(strlen(token) + 1, sizeof(char));
+		char* postMoney = calloc(strlen(token) + 1, sizeof(char));
+
+
+
+		printf("this token is %s\n\n", token);
+
+		strcpy(postMoney, token);
+
+		printf("\npostMoney is: %s\n", postMoney);
+
+		// check to see if there are any $'s found
+		moneyCatcher = moneyCheck(postMoney);
+
 		strcpy(allUserCmds->arrayOfArgs[j], token);
 
-		printf("array position %d is %s\n", j, allUserCmds->arrayOfArgs[j]);
+		//printf("array position %d is %s\n", j, allUserCmds->arrayOfArgs[j]);
 
 		if (strcmp(token, ">") == 0) {
 
@@ -441,13 +102,23 @@ struct userCmds* cmdLine(char* userInput)
 			// goes to the token afer the '>' and assigns that to the file name
 			//	to be created
 			token = strtok(NULL, " ");
-			strcpy(allUserCmds->fInput, token);
-			printf("the input file is: %s\n", allUserCmds->fInput);
+			
+			// this is a catch in case the last item in the argument is a > symbol
+			//	so there is no segFault
+			if (token == NULL) {
+				continue;
+			}
+
+			// assigns output file
+			strcpy(allUserCmds->fOutput, token);
+			printf("the ouput file is: %s\n", allUserCmds->fOutput);
 
 			// increment the array counter, allocate the memory for that location
 			//	and copy that item to the array
 			j++;
 			allUserCmds->arrayOfArgs[j] = calloc(strlen(token) + 1, sizeof(char));
+
+			// adds item to argument array
 			strcpy(allUserCmds->arrayOfArgs[j], token);
 		}
 
@@ -458,9 +129,16 @@ struct userCmds* cmdLine(char* userInput)
 			// goes to the token afer the '<' and assigns that to the file name
 			//	to be output to
 			token = strtok(NULL, " ");
-			strcpy(allUserCmds->fOutput, token);
 
-			printf("the output file is: %s\n", allUserCmds->fOutput);
+			// this is a catch in case the last item in the argument is a > symbol
+			//	so there is no segFault
+			if (token == NULL) {
+				continue;
+			}
+
+			strcpy(allUserCmds->fInput, token);
+
+			printf("the input file is: %s\n", allUserCmds->fInput);
 
 			// increment the array counter, allocate the memory for that location
 			//	and copy that item to the array
@@ -483,7 +161,7 @@ struct userCmds* cmdLine(char* userInput)
 	if (strcmp(allUserCmds->arrayOfArgs[j - 1], "&") == 0) {
 		allUserCmds->background = true;
 	}
-
+	;
 	// test statements
 	printf("the last item in the array is: %s\n", allUserCmds->arrayOfArgs[j - 1]);
 
@@ -498,34 +176,86 @@ struct userCmds* cmdLine(char* userInput)
 	printf("\n");
 	// end of test statements
 
-	// if the character '&' is the last item in the arguments
-			// make this a background process
-	
-	// if > is in the arguments, and is surrounded 
-
-	// if # is the first item in the input, do nothing
-
-	// if the line is empty, do nothing
-
-	// if < is found, then the next item in the array will be an input file
-
-	// if > is found, then the next item in the array will be an output file
-				
-    // The second token is the year of the movie's release
-    //token = strtok_r(NULL, ",", &saveptr);
-    //int yearNum = atoi(token);
-    //currMovie->year = yearNum;
-
-    //// The third token is the languages
-    //token = strtok_r(NULL, ",", &saveptr);
-    //currMovie->languages = calloc(strlen(token) + 1, sizeof(char));
-    //strcpy(currMovie->languages, token);
-
-    //// The fourth token is the rating
-    //token = strtok_r(NULL, "\n", &saveptr);
-    //currMovie->rating = strtod(token, &saveptr);
-
     return allUserCmds;
+}
+
+/*
+function: truncateMoney
+
+Input: varWithMoney
+
+output: truncMoney
+
+Purpose: This is a function that takes the first instance of the $ symbol, truncates it, and returns the string without any $
+*/
+char* truncateMoney(char* varWithMoney) {
+	char* firstMoney;
+	int index;
+	char* truncMoney = malloc(512);
+
+	// finds the index where the first $ is found;
+	//	This will be truncated
+	firstMoney = strchr(varWithMoney, '$');
+	index = (int)(firstMoney - varWithMoney);
+
+	strcpy(truncMoney, varWithMoney);
+
+	truncMoney[index] = '\0';
+
+	return truncMoney;
+}
+
+char* expandTheMoney(char* varToExpand) {
+	// counts instances of $
+	int moneyCounter = 0;
+	char* pidString = malloc(125);
+	char* expansionHolder = malloc(MAX_INPUT_LENGTH);
+	char* expansionFinalForm = malloc(MAX_INPUT_LENGTH);
+	int expansions = 0;
+
+	for (int i = 0; i < (strlen(varToExpand)); i++) {
+		if (varToExpand[i] == '$') {
+			moneyCounter++;
+		}
+	}
+	
+	// truncate all of the $ off of the variable
+	expansionHolder = truncateMoney(varToExpand);
+	
+	expansions = (moneyCounter / 2);
+
+	// get the string version of the process ID
+	sprintf(pidString, "%d", getpid());
+
+	// concatenate the pid to the string the amount of times that $$ was present
+	for (int j = 0; j < expansions; j++) {
+		strcat(expansionHolder, pidString);
+	}
+
+	// add a final $ to the new string if the amount of $$'s is odd
+	if (moneyCounter % 2 == 1) {
+		strcat(expansionHolder, "$");
+	}
+
+	return expansionHolder;
+}
+
+// this will look at a string and see if there are any $'s
+char* moneyCheck(char *token) {
+	char* lastChar = malloc(5);
+	char* nextToLastChar = malloc(5);
+	char* varExpansion = malloc(MAX_INPUT_LENGTH);
+
+	sprintf(lastChar, "%c", token[strlen(token) - 1]);
+	sprintf(nextToLastChar, "%c", token[strlen(token) - 2]);
+
+	if ((strcmp(lastChar, "$") == 0) && (strcmp(nextToLastChar, "$") == 0)) {
+		varExpansion = expandTheMoney(token);
+		return varExpansion;
+	}
+
+	// if there are not two $'s then do nothing
+	return token;
 }
 
 char* getUserInput() {
@@ -556,6 +286,8 @@ int main()
 {
 	char* userArgs = malloc(MAX_INPUT_LENGTH);
 	char poundAscii[5];
+
+	printf("pid is %d", getpid());
 	
 	while (true) {
 
