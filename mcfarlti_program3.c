@@ -51,6 +51,7 @@ struct userCmds* cmdLine(char* userInput);
 char* moneyCheck(char* token);
 char* expandTheMoney(char* varToExpand);
 char* truncateMoney(char* varWithMoney);
+int handleRedirect(struct userCmds* cmdStruct);
 void theForkParty(struct userCmds* cmdStruct);
 
 struct userCmds* cmdLine(char* userInput)
@@ -79,8 +80,6 @@ struct userCmds* cmdLine(char* userInput)
 
 		// alocate memory
 		allUserCmds->arrayOfArgs[j] = calloc(strlen(token) + 1, sizeof(char));
-		allUserCmds->fInput = calloc(strlen(token) + 1, sizeof(char));
-		allUserCmds->fOutput = calloc(strlen(token) + 1, sizeof(char));
 		char* expandedVar = calloc(strlen(token) + 1, sizeof(char));
 		char* postMoney = calloc(strlen(token) + 1, sizeof(char));
 
@@ -89,20 +88,29 @@ struct userCmds* cmdLine(char* userInput)
 
 		// check to see if there are any $$'s found and add to the array
 		expandedVar = moneyCheck(postMoney);
-		strcpy(allUserCmds->arrayOfArgs[j], expandedVar);
+
+		if (strcmp(expandedVar, ">") != 0 && strcmp(expandedVar, "<") != 0) {
+			strcpy(allUserCmds->arrayOfArgs[j], expandedVar);
+		}
 
 		//printf("array position %d is %s\n", j, allUserCmds->arrayOfArgs[j]);
 
 		if (strcmp(token, ">") == 0) {
 
+			allUserCmds->fOutput = calloc(strlen(token) + 1, sizeof(char));
+
 			// goes to the token afer the '>' and assigns that to the file name
 			//	to be created
 			token = strtok(NULL, " ");
+
+			// this tells us to have output/input
+			allUserCmds->ioRedirect = true;
 			
 			// this is a catch in case the last item in the argument is a > symbol
 			//	so there is no segFault
 			if (token == NULL) {
 				printf("ERROR: You cannot end with the > command");
+				fflush(stdout);
 				continue;
 			}
 
@@ -111,22 +119,28 @@ struct userCmds* cmdLine(char* userInput)
 
 			// assigns output file
 			strcpy(allUserCmds->fOutput, expandedVar);
-			printf("the ouput file is: %s\n", allUserCmds->fOutput);
+
+			//printf("the ouput file is: %s\n", allUserCmds->fOutput);
 
 			// increment the array counter, allocate the memory for that location
 			//	and copy that item to the array
-			j++;
-			allUserCmds->arrayOfArgs[j] = calloc(strlen(expandedVar) + 1, sizeof(char));
+			//j++;
+			//allUserCmds->arrayOfArgs[j] = calloc(strlen(expandedVar) + 1, sizeof(char));
 
 			// adds item to argument array
-			strcpy(allUserCmds->arrayOfArgs[j], expandedVar);
+			//strcpy(allUserCmds->arrayOfArgs[j], expandedVar);
 		}
 
 		else if (strcmp(token, "<") == 0) {
 
+			allUserCmds->fInput = calloc(strlen(token) + 1, sizeof(char));
+
 			// goes to the token afer the '<' and assigns that to the file name
 			//	to be output to
 			token = strtok(NULL, " ");
+
+			// this tells us to have output/input
+			allUserCmds->ioRedirect = true;
 
 			// this is a catch in case the last item in the argument is a > symbol
 			//	so there is no segFault
@@ -140,13 +154,11 @@ struct userCmds* cmdLine(char* userInput)
 
 			strcpy(allUserCmds->fInput, expandedVar);
 
-			printf("the input file is: %s\n", allUserCmds->fInput);
-
 			// increment the array counter, allocate the memory for that location
 			//	and copy that item to the array
-			j++;
-			allUserCmds->arrayOfArgs[j] = calloc(strlen(expandedVar) + 1, sizeof(char));
-			strcpy(allUserCmds->arrayOfArgs[j], expandedVar);
+			//j++;
+			//allUserCmds->arrayOfArgs[j] = calloc(strlen(expandedVar) + 1, sizeof(char));
+			//strcpy(allUserCmds->arrayOfArgs[j], expandedVar);
 		}
 
 		// moves to the next array position and the next item to be tokenized
@@ -158,21 +170,26 @@ struct userCmds* cmdLine(char* userInput)
 	//	if it is, then the user has requested a background process
 	if (strcmp(allUserCmds->arrayOfArgs[j - 1], "&") == 0) {
 		allUserCmds->background = true;
+		allUserCmds->arrayOfArgs[j - 1] = NULL;			// make it so the & is not passed
 	}
 	;
 	// test statements
-	printf("the last item in the array is: %s\n", allUserCmds->arrayOfArgs[j - 1]);
+	//printf("the last item in the array is: %s\n", allUserCmds->arrayOfArgs[j - 1]);
 
-	printf("%s", allUserCmds->background ? "true" : "false");
+	//printf("%s\n\n", allUserCmds->background ? "Background Processes Are Active" : "Background Processes Are Off");
 
-	printf("The array you input is:\n");
+	//printf("%s\n\n", allUserCmds->ioRedirect ? "There is file redirection" : "No file redirection needed");
+
+	//printf("The array you input is:\n");
 
 	for (int k = 0; k < j; k++) {
 		printf("%s ", allUserCmds->arrayOfArgs[k]);
 	}
 
-	printf("\n");
+	//printf("\n");
 	// end of test statements
+
+	fflush(stdout);
 
     return allUserCmds;
 }
@@ -218,31 +235,31 @@ char* expandTheMoney(char* varToExpand) {
 			moneyCounter++;
 		}
 	}
-	
-	// truncate all of the $ off of the variable
-	expansionHolder = truncateMoney(varToExpand);
-	
-	// find out how many times to add pid of shell
-	expansions = (moneyCounter / 2);
 
-	// get the string version of the process ID
-	sprintf(pidString, "%d", getpid());
+// truncate all of the $ off of the variable
+expansionHolder = truncateMoney(varToExpand);
 
-	// concatenate the pid to the string the amount of times that $$ was present
-	for (int j = 0; j < expansions; j++) {
-		strcat(expansionHolder, pidString);
-	}
+// find out how many times to add pid of shell
+expansions = (moneyCounter / 2);
 
-	// add a final $ to the new string if the amount of $$'s is odd
-	if (moneyCounter % 2 == 1) {
-		strcat(expansionHolder, "$");
-	}
+// get the string version of the process ID
+sprintf(pidString, "%d", getpid());
 
-	return expansionHolder;
+// concatenate the pid to the string the amount of times that $$ was present
+for (int j = 0; j < expansions; j++) {
+	strcat(expansionHolder, pidString);
+}
+
+// add a final $ to the new string if the amount of $$'s is odd
+if (moneyCounter % 2 == 1) {
+	strcat(expansionHolder, "$");
+}
+
+return expansionHolder;
 }
 
 // this will look at a string and see if there are any $'s
-char* moneyCheck(char *token) {
+char* moneyCheck(char* token) {
 	char* lastChar = malloc(5);
 	char* nextToLastChar = malloc(5);
 	char* varExpansion = malloc(MAX_INPUT_LENGTH);
@@ -285,6 +302,88 @@ char* getUserInput() {
 	return userInput;
 }
 
+int handleRedirect(struct userCmds* commands) {
+	int outputOpen;
+	int inputOpen;
+	int dupOutput;
+	int dupInput;
+	// input file redirected via stdin should be openend for reading only, if the shell cannot open the file, it should
+	//     print an error message and set the exit status to 1, but not exit the shell
+
+	// output file redirected via stdout should be opened for writing only; it should be truncated if it already exists or
+	// 	   created if it doesn't exit. If your shell cannot open the output file, it should print an error message and set
+	// 	   the exit status to 1 (but don't exit the shell).
+	// 
+
+	// stdin and stdout for a command can be redirected at the same time
+
+
+	// output file should be opened for 
+	// if the file is an output file
+
+	printf("******\nthe output file is: %s\n*****", commands->fOutput);
+	printf("\n******\nthe input file is: %s\n******", commands->fInput);
+
+	fflush(stdout);
+
+	//printf("\n\n fInput is %s\n", commands->fInput);
+	//printf("the length of input is %d\n", strlen(commands->fInput));
+
+	//printf("\n\n fOutput is %s\n", commands->fOutput);
+
+	// check to see if there is a file to input
+	if (strlen(commands->fInput) != 0) {
+	//if (commands->fInput != NULL) {
+
+		// if there is, input should be opened for reading only
+		inputOpen = open(commands->fInput, O_RDONLY | O_CLOEXEC, 0777);
+
+		// if there is an error opening the file, say so
+		if (inputOpen == -1) {
+			perror("Cannot open input file\n\n");
+			fflush(stdout);
+			exit(1);
+		}
+
+		dupInput = dup2(inputOpen, 0);
+
+		if (dupInput == -1) {
+			perror("something went wrong\n");
+			fflush(stdout);
+			exit(1);
+		}
+
+	}
+
+	if (strlen(commands->fOutput) != 0) {
+	//if (commands->fOutput != NULL) {
+	// output file is opened for writing only, is truncated if it already exists,
+	//     or created if it doesn't exist
+	outputOpen = open(commands->fOutput, O_CREAT | O_WRONLY | O_TRUNC | O_CLOEXEC, 0777);
+
+		if (outputOpen == -1) {
+			perror("Cannot open output file\n\n");
+			fflush(stdout);
+			exit(1);
+		}
+
+		dupOutput = dup2(outputOpen, 1);
+
+		if (dupOutput == -1) {
+			perror("Something went wrong\n");
+			fflush(stdout);
+			exit(1);
+		}
+
+		return 0;
+	}
+
+		// open the output file name
+			// make sure that you have permissions to open and write
+		// take this file name and redirect all of the command to this file
+		// execvp the command - this will now output to this folder
+}
+
 /*
 theForkParty is modified from explorations
 */
@@ -296,24 +395,83 @@ void theForkParty(struct userCmds* cmdStruct) {
 
 	int pidWait;
 
+	int redirectSuccess;
+
+	// execStatus will catch the status of the execvp function
+	//	if this is a -1, then there was an error
+	int execStatus;
+
 	// If fork is successful, the value of spawnpid will be 0 in the child, the child's pid in the parent
 	spawnpid = fork();
 	switch (spawnpid) {
 	case -1:
 		// Code in this branch will be exected by the parent when fork() fails and the creation of child process fails as well
 		perror("fork() failed!");
+
+		// flushing as often as possible :)
+		fflush(stdout);
 		exit(1);
 		break;
 	case 0:
 
 		if (cmdStruct->ioRedirect) {
+			// if this case occurs, then input or output file will be handled
+
+			// returns 0 if successful; otherwise, returns -1
+			redirectSuccess = handleRedirect(cmdStruct);
+
 			// setup IO, then exec
 			// check and redirect the file
 			// then exec
 			// use dup2() read on the manpage
 		}
 
-		execvp(cmdStruct->arrayOfArgs[0], cmdStruct->arrayOfArgs);
+		printf("You are in the child!!\n\n");
+		fflush(stdout);
+
+		// if the user types & at the end of the command line -- this will make it so that
+		//	no information will be printed to the user. Further, this will also 
+		if (cmdStruct->background) {
+
+			int devNullStatus = open("/dev/null", O_WRONLY);
+
+			if (devNullStatus == -1) {
+				perror("could not open /dev/null for some reason\n");
+				exit(2);
+			}
+
+			int dumpOut = dup2(devNullStatus, 1);
+
+			if (dumpOut == -1) {
+				perror("something went wrong, we could not get rid of STDOUT!!\n\n");
+				exit(2);
+			}
+
+			int stdInDump = open("/dev/null", O_RDONLY);
+
+			if (stdInDump == -1) {
+				perror("source open()");
+				exit(2);
+			}
+
+			// redirect stdin to /dev/null
+			int dumpIn = dup2(stdInDump, 0);
+
+			if (dumpIn == -1) {
+				perror("something went wrong, we could not get rid of STDIN!!\n\n");
+				exit(2);
+			}
+		}
+
+		// execute the commands
+		execStatus = execvp(cmdStruct->arrayOfArgs[0], cmdStruct->arrayOfArgs);
+
+		if (execStatus == -1) {
+			// if the return of execvp is -1, there was an error -- show that to user
+			perror("Command not found -- sorry!!\n");
+			exit(1);
+		}
+
 			// there is redirect
 		// spawnpid is 0. This means the child will execute the code in this branch
 		
@@ -346,17 +504,30 @@ void theForkParty(struct userCmds* cmdStruct) {
 		break;
 	default:
 		// spawnpid is the pid of the child. This means the parent will execute the code in this branch
-
+		//printf("You are in the parent!!\n\n");
+		//fflush(stdout);
+		//printf("Also, it looks like the background is %s\n\n", cmdStruct->background ? "ON" : "OFF");
+		
 		// this is the standard wait process and this will be in the foreground
 		if (cmdStruct->background) {
 			// keep track of this with an array
 			// that way you can kill the zombies of your background processes
 			childPid = waitpid(spawnpid, &pidWait, WNOHANG);
+
+			//printf("the value of devNullStatus is: %d\n\n", devNullStatus);
+
+			//printf("the value of dumpResult is: %d\n\n", dumpResult);
+
+			// make sure that background process doesn't read from STDIN or write to STDOUT
 		}
 
 		else {
 			childPid = waitpid(spawnpid, &pidWait, 0);
 		}
+
+		fflush(stdout);
+
+		waitpid(spawnpid, &pidWait, 0);
 
 		// !!!!!!!!!!!! this is to ensure that a background process occurs
 		break;
@@ -394,7 +565,7 @@ int main()
 
 		// Changing of directory
 		if (strcmp(cmdStruct->arrayOfArgs[0], "cd") == 0) {
-			printf("looks like you have a CD there bro\n\n");
+			//printf("looks like you have a CD there bro\n\n");
 
 			if (cmdStruct->arrayOfArgs[1] == NULL) {
 				chdir(getenv("HOME"));
@@ -408,6 +579,7 @@ int main()
 
 		else if (strcmp(cmdStruct->arrayOfArgs[0], "status") == 0) {
 			printf("status is here\n\n");
+			fflush(stdout);
 		}
 
 		// if the user types in "exit" this will leave the program.
