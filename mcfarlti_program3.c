@@ -2,7 +2,7 @@
 // ONID: 934066739
 // CS 344
 // Assignment 3
-// Last Modified: 5/1/2021
+// Last Modified: 5/2/2021
 // Due Date: 5/3/2021
 
 #define _GNU_SOURCE
@@ -56,14 +56,14 @@ void	inBackground(int finishedPid, int finishedStatus);
 void	handle_SIGINT(int status);
 
 
+// Takes the userInput and breaks it down into basic components and adds them to
+//	the struct userCmds
 struct userCmds* cmdLine(char* userInput)
 {
 
 	// this will advance the array that items will be added to
 	int j = 0;
 	
-	char* lastArrayItem = malloc(MAX_INPUT_LENGTH);
-
     // the struct must have memory allocated for it
     struct userCmds *allUserCmds = malloc(sizeof(struct userCmds));
 
@@ -81,7 +81,6 @@ struct userCmds* cmdLine(char* userInput)
 
 	while (token != NULL) {
 
-
 		// alocate memory
 		allUserCmds->arrayOfArgs[j] = calloc(strlen(token) + 1, sizeof(char));
 		char* expandedVar = calloc(strlen(token) + 1, sizeof(char));
@@ -92,10 +91,12 @@ struct userCmds* cmdLine(char* userInput)
 		// check to see if there are any $$'s found and add to the array
 		expandedVar = moneyCheck(postMoney);
 
+
 		if (strcmp(expandedVar, ">") != 0 && strcmp(expandedVar, "<") != 0 && strcmp(expandedVar, "") != 0) {
 		 	strcpy(allUserCmds->arrayOfArgs[j], expandedVar);
 		}
 
+		// if the user is requesting an output file, prepare that for the user
 		if (strcmp(token, ">") == 0) {
 
 			allUserCmds->fOutput = calloc(strlen(token) + 1, sizeof(char));
@@ -148,6 +149,7 @@ struct userCmds* cmdLine(char* userInput)
 			allUserCmds->arrayOfArgs[j] = NULL;
 		}
 
+		// go to the next array position and to the next token
 		j++;
 		token = strtok(NULL, " ");
 	}
@@ -172,15 +174,8 @@ struct userCmds* cmdLine(char* userInput)
     return allUserCmds;
 }
 
-/*
-function: truncateMoney
 
-Input: varWithMoney
-
-output: truncMoney
-
-Purpose: This is a function that takes the first instance of the $ symbol, truncates it, and returns the string without any $
-*/
+//takes the first instance of the $ symbol, truncates it, and returns the string without any $
 char* truncateMoney(char* varWithMoney) {
 	char* firstMoney;
 	int index;
@@ -199,12 +194,15 @@ char* truncateMoney(char* varWithMoney) {
 	return truncMoney;
 }
 
+// if any instances of $$ were found, it will be expanded with the
+//	shell's pid. if there are an even number of $, then the pid
+//	will be added to the string by a factor of two. If there is an
+//	odd number of $, the afforementioned will be executed and 
+//	a $ will be apended at the end
 char* expandTheMoney(char* varToExpand) {
-	// counts instances of $
 	int moneyCounter = 0;
 	char* pidString = malloc(125);
 	char* expansionHolder = malloc(MAX_INPUT_LENGTH);
-	char* expansionFinalForm = malloc(MAX_INPUT_LENGTH);
 	int expansions = 0;
 
 	// find all instances of the charracter $
@@ -256,11 +254,10 @@ char* moneyCheck(char* token) {
 	return token;
 }
 
+// gathers user input
 char* getUserInput() {
 	char* userInput = calloc(MAX_INPUT_LENGTH, sizeof(char));
 	int strSize;
-
-	// show : as prompt for smallsh and flush it out before receiving input from user
 
 	// using fgets to restrict the input to 2056 characters,
 	//	and pointing the access point to the stdin
@@ -283,15 +280,14 @@ char* getUserInput() {
 	return userInput;
 }
 
+// Function takes the user struct and determines if there is input redirect
+//	output redirect or both. The folders are prepped and sent out.
 void handleRedirect(struct userCmds* commands) {
 	int outputOpen;
 	int inputOpen;
 	int dupOutput;
 	int dupInput;
 
-	//printf("\n\n fInput is %s\n", commands->fInput);
-	//printf("the length of input is %d\n", strlen(commands->fInput));
-	//printf("\n\n fOutput is %s\n", commands->fOutput);
 	// check to see if there is a file to input
 	if (commands->fInput != NULL) {
 
@@ -305,6 +301,7 @@ void handleRedirect(struct userCmds* commands) {
 			exit(1);
 		}
 
+		// redirect the input, 0 allows that to come in
 		dupInput = dup2(inputOpen, 0);
 
 		if (dupInput == -1) {
@@ -317,26 +314,18 @@ void handleRedirect(struct userCmds* commands) {
 	}
 
 	if (commands->fOutput != NULL) {
-	// output file is opened for writing only, is truncated if it already exists,
-	//     or created if it doesn't exist
-
+		// output file is opened for writing only, is truncated if it already exists,
+		//     or created if it doesn't exist
 		outputOpen = open(commands->fOutput, O_WRONLY | O_CREAT | O_TRUNC, 0777);
 
+		// error message
 		if (outputOpen == -1) {
 			perror("Cannot open output file\n\n");
 			fflush(stdout);
-
-			// this should be an exit STATUS flag
 			exit(1);
 		}
 
-		//else {
-		//	if (dup2(outputOpen, 1) == -1) {
-		//		perror("cannot open file\n");
-		//		close(outputOpen);
-		//	}
-		//}
-
+		// redirect the output, 1 allows for that to go out
 		dupOutput = dup2(outputOpen, 1);
 
 		if (dupOutput == -1) {
@@ -349,24 +338,32 @@ void handleRedirect(struct userCmds* commands) {
 	}
 }
 
+// If the user inputs & then this will process in the background.
 void backgroundRedirect(void) {
 
+		// devNullStatus is the Linux trash can
 		int devNullStatus = open("/dev/null", O_WRONLY);
 
+		// error message (unlikely to happen)
 		if (devNullStatus == -1) {
 			perror("could not open /dev/null for some reason\n");
 			exit(2);
 		}
 
+		// this redirects all output to dev/null. 1 is the code for
+		//	output redirect
 		int dumpOut = dup2(devNullStatus, 1);
 
+		// error message
 		if (dumpOut == -1) {
 			perror("something went wrong, we could not get rid of STDOUT!!\n\n");
 			exit(2);
 		}
 
+		// Dev null is the perfect trash can
 		int stdInDump = open("/dev/null", O_RDONLY);
 
+		// error message
 		if (stdInDump == -1) {
 			perror("source open()");
 			exit(2);
@@ -375,11 +372,13 @@ void backgroundRedirect(void) {
 		// redirect stdin to /dev/null
 		int dumpIn = dup2(stdInDump, 0);
 
+		// error message
 		if (dumpIn == -1) {
 			perror("something went wrong, we could not get rid of STDIN!!\n\n");
 			exit(2);
 		}
 }
+
 
 void inBackground(int finishedPid, int finishedStatus) {
 
@@ -400,6 +399,7 @@ void inBackground(int finishedPid, int finishedStatus) {
 	}
 }
 
+// 
 void pidExitCheck (void) {
 	int finishedPid;
 	int finishedStatus;
@@ -438,8 +438,11 @@ void theForkParty(struct userCmds* cmdStruct, struct sigaction childSignal) {
 		fflush(stdout);
 		exit(1);
 		break;
+
+	// This is the child process
 	case 0:
 		
+		// if this is a foreground process, allow ^C to terminate it.
 		if (cmdStruct->background != true) {
 			// resetting the default for child
 			childSignal.sa_handler = SIG_DFL;
@@ -448,17 +451,17 @@ void theForkParty(struct userCmds* cmdStruct, struct sigaction childSignal) {
 			sigaction(SIGINT, &childSignal, NULL);
 		}
 
+		// if there is an input or output file, redirect the input/output
 		if (cmdStruct->ioRedirect) {
-			// if this case occurs, then input or output file will be handled
 			handleRedirect(cmdStruct);
 		}
 
-		// if the user types & at the end of the command line -- this will make it so that
-		//	no information will be printed to the user. Further, this will also 
+		// if this is a background process
 		else if (cmdStruct->background) {
 			backgroundRedirect();
 		}
 		
+		// execute the request from the user
 		execStatus = execvp(cmdStruct->arrayOfArgs[0], cmdStruct->arrayOfArgs);
 
 		if (execStatus == -1) {
@@ -468,22 +471,20 @@ void theForkParty(struct userCmds* cmdStruct, struct sigaction childSignal) {
 		}
 		break;
 
-			// if you have "ls &", you should have that sent to dev/null
-				// If the user doesn't redirect the standard input for a background command, then standard input should be redirected to /dev/null
-				// If the user doesn't redirect the standard output for a background command, then standard output should be redirected to /dev/null
-				// THIS IS WHERE YOU WILL REDIRECT ANYTHING THAT DOESN'T HAVE AN INPUT OR OUTPUT FILE. use dup2() and send to /dev/null **********
-
-		// here, you do stuff with your signals
-
+	// This is the parent process
 	default:
 		
-		// this is the standard wait process and this will be in the foreground
+		// if the user has requested that this be a background process
 		if (cmdStruct->background) {
-			// keep track of this with an array
-			// that way you can kill the zombies of your background processes
-			childPid = waitpid(spawnpid, &pidWait, WNOHANG);
-			printf("\nbackground pid is %d\n", spawnpid);
 
+			// the child will execute but another child will be spawned without waiting
+			childPid = waitpid(spawnpid, &pidWait, WNOHANG);
+
+			// show the user what the current background PID is
+			printf("\nbackground pid is %d\n", spawnpid);
+			fflush(stdout);
+
+			// store the background processes in an array and move to the next position of the array
 			pidHolder[j] = spawnpid;
 			j++;
 		}
@@ -499,18 +500,17 @@ void theForkParty(struct userCmds* cmdStruct, struct sigaction childSignal) {
 		// wait for any process to finish -- if it finishes and returns, it will compare to the array and will print the exit status for it and remove it from the array
 		pidExitCheck();
 
-		//fflush(stdout);
-
-		// !!!!!!!!!!!! this is to ensure that a background process occurs
 		break;
 	}
 	
 }
 
+// if a user types ^Z, this will toggle
+//	Foreground only mode
 void handle_SIGTSTP(int handle) {
 	char* message1 = "\nForeground mode is ACTIVE\n";
 	char* message2 = "\nForeground mode is INACTIVE\n";
-	// We are using write rather than printf
+
 	if (foregroundOnly == false) {
 		foregroundOnly = true;
 		write(STDOUT_FILENO, message1, strlen(message1));
@@ -522,12 +522,12 @@ void handle_SIGTSTP(int handle) {
 	}
 }
 
-// this is to use ^C -- this will terminate ONLY
-//	the child process
+// terminates a child process (called in the child fork)
+//	and executes the child process
 void handle_SIGINT(int status) {
 	char* message1 = "\nTerminated by signal ";
 	char* num = malloc(12);
-	sprintf(num, "%d", WTERMSIG(status));
+	sprintf(num, "%d\n", WTERMSIG(status));
 
 	// We are using write rather than printf
 	if (WIFSIGNALED(status) != 0 && status == SIGINT) {
@@ -547,7 +547,8 @@ int main()
 	}
 
 	// ***************************************************
-	// This will ignore ^C -- this will ignore
+	//	Signal Handler that modifies ^C's functionality
+	// ***************************************************
 	// adapted from lecture
 	// initialize empty struct
 	struct sigaction SIGINT_action = { 0 };
@@ -555,39 +556,46 @@ int main()
 	// Fill out the SIGINT_action struct
 	// Register handle_SIGINT as the signal handler
 	SIGINT_action.sa_handler = SIG_IGN;
+
 	// Block all catchable signals while handle_SIGINT is running
 	sigfillset(&SIGINT_action.sa_mask);
+	
 	// No flags set
 	SIGINT_action.sa_flags = 0;
 
 	// Install our signal handler
 	sigaction(SIGINT, &SIGINT_action, NULL);
-	// ********************************************************
 
-
-	// adapted from lecture
+	// ***************************************************
+	//	Signal Handler that modifies ^Z's functionality
+	// ***************************************************
 	// initialize empty struct
 	struct sigaction SIGTSTP_action = { 0 };
 
-	// Fill out the SIGINT_action struct
-	// Register handle_SIGINT as the signal handler
+	// Fill out the SIGTSTP struct
+	// Register handle_SIGTSTP as the signal handler
 	SIGTSTP_action.sa_handler = handle_SIGTSTP;
-	// Block all catchable signals while handle_SIGINT is running
+
+	// Block all catchable signals while handle_SIGTSTP is running
 	sigfillset(&SIGTSTP_action.sa_mask);
+
 	// No flags set
 	SIGTSTP_action.sa_flags = 0;
 
-	// Install our signal handler
+	// Install the signal handler
 	sigaction(SIGTSTP, &SIGTSTP_action, NULL);
 
 
 	while (true) {
 
+		// print the : prompt to the screen and flush it out
 		printf(": ");
 		fflush(stdout);
+
 		// must be passed to convert to integer
 		userArgs = getUserInput();
 
+		// this will handle the case where ^Z is called
 		if (userArgs == NULL) {
 			continue;
 		}
@@ -613,16 +621,18 @@ int main()
 		// Changing of directory
 		if (strcmp(cmdStruct->arrayOfArgs[0], "cd") == 0) {
 
+			// this will return to the home directory of the user
 			if (cmdStruct->arrayOfArgs[1] == NULL) {
 				chdir(getenv("HOME"));
 			}
 
+			// otherwise, this will go to the stated directory
 			else {
 				chdir(cmdStruct->arrayOfArgs[1]);
 			}
 		}
 
-		// if user types status the following will occur
+		// handles the argument "status"
 		else if (strcmp(cmdStruct->arrayOfArgs[0], "status") == 0) {
 
 			// if foreground process was exited normally
@@ -636,16 +646,15 @@ int main()
 			}
 		}
 
-		// if the user types in "exit" this will leave the program.
+		// if the user types in "exit" this will kill all processes and exit the shell.
 		else if (strcmp(userArgs, "exit") == 0) {
 			kill(0, SIGKILL);
 			break;
 		}
 
+		// fork a new process
 		else {
 			theForkParty(cmdStruct, SIGINT_action);
-
-			// if background process is done - KILL IT!!!!!
 		}
 	}
 	free(userArgs);
