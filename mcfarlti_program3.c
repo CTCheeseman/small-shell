@@ -49,7 +49,7 @@ char*	moneyCheck(char* token);
 char*	expandTheMoney(char* varToExpand);
 char*	truncateMoney(char* varWithMoney);
 void	handleRedirect(struct userCmds* cmdStruct);
-void	theForkParty(struct userCmds* cmdStruct);
+void	theForkParty(struct userCmds* cmdStruct, struct sigaction childSignal);
 void	handle_SIGTSTP(int handle);
 void	pidExitCheck(void);
 void	inBackground(int finishedPid, int finishedStatus);
@@ -169,17 +169,6 @@ struct userCmds* cmdLine(char* userInput)
 		allUserCmds->arrayOfArgs[j - 1] = NULL;			// make it so the & is not passed
 	}
 
-	// test statements
-	//printf("the last item in the array is: %s\n", allUserCmds->arrayOfArgs[j - 1]);
-	//printf("%s\n\n", allUserCmds->background ? "Background Processes Are Active" : "Background Processes Are Off");
-	//printf("%s\n\n", allUserCmds->ioRedirect ? "There is file redirection" : "No file redirection needed");
-	//printf("\nThe array you input is:\n");
-	//for (int k = 0; k < j; k++) {
-	//	printf("%s ", allUserCmds->arrayOfArgs[k]);
-	//}
-	//printf("\n");
-	//// end of test statements
-	//fflush(stdout);
     return allUserCmds;
 }
 
@@ -357,8 +346,6 @@ void handleRedirect(struct userCmds* commands) {
 		}
 
 		close(outputOpen);
-
-		//fcntl(outputOpen, F_SETFD, FD_CLOEXEC);
 	}
 }
 
@@ -403,11 +390,11 @@ void inBackground(int finishedPid, int finishedStatus) {
 		if (finishedPid != 0 && pidHolder[i] == finishedPid) {
 
 			if (WIFEXITED(finishedStatus) != 0) {
-				printf("Background process exited with status %d\n", WEXITSTATUS(finishedStatus));
+				printf("Background process %d exited with status %d\n", finishedPid, WEXITSTATUS(finishedStatus));
 			}
 
 			else if (WIFSIGNALED(finishedStatus) != 0) {
-				printf("Background process exited with signal %d\n", WTERMSIG(finishedStatus));
+				printf("Background process %d exited with signal %d\n", finishedPid, WTERMSIG(finishedStatus));
 			}
 		}
 	}
@@ -426,7 +413,7 @@ void pidExitCheck (void) {
 /*
 theForkParty is modified from explorations
 */
-void theForkParty(struct userCmds* cmdStruct) {
+void theForkParty(struct userCmds* cmdStruct, struct sigaction childSignal) {
 
 	// -5 is simply a holder value
 	pid_t childPid = -5;
@@ -453,8 +440,12 @@ void theForkParty(struct userCmds* cmdStruct) {
 		break;
 	case 0:
 		
-		if (foregroundOnly) {
-			SIGINT_action.sa_handler = SIG_DFL;
+		if (cmdStruct->background != true) {
+			// resetting the default for child
+			childSignal.sa_handler = SIG_DFL;
+
+			// activating the new handler
+			sigaction(SIGINT, &childSignal, NULL);
 		}
 
 		if (cmdStruct->ioRedirect) {
@@ -539,7 +530,7 @@ void handle_SIGINT(int status) {
 	sprintf(num, "%d", WTERMSIG(status));
 
 	// We are using write rather than printf
-	if (status == SIGINT) {
+	if (WIFSIGNALED(status) != 0 && status == SIGINT) {
 		write(STDOUT_FILENO, message1, strlen(message1));
 		write(STDOUT_FILENO, num, strlen(num));
 	}
@@ -647,12 +638,12 @@ int main()
 
 		// if the user types in "exit" this will leave the program.
 		else if (strcmp(userArgs, "exit") == 0) {
-			// TO DO: End all processes
+			kill(0, SIGKILL);
 			break;
 		}
 
 		else {
-			theForkParty(cmdStruct);
+			theForkParty(cmdStruct, SIGINT_action);
 
 			// if background process is done - KILL IT!!!!!
 		}
