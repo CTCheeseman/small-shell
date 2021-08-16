@@ -1,12 +1,10 @@
-Name: Tim McFarland
-Date: 5/2/2021
-Assignment: smallsh (Assignment 3)
+This is the portfolio project for Oregon State University's CS344 - Introduction to Operating Systems
 
-How to run code:
+This is a shell that can be activated using Bash. It was compiled on the Oregon State University
+engineering servers, so there may need to be some modifications to run properly on other machines.
 
-Steps:
-1) ssh flip1.engr.oregonstate.edu
-2) ssh os1.engr.oregonstate.edu
-3) compile by using gcc --std=gnu99 -g -o smallsh mcfarlti_program3.c
-4) Ran against testing scripts by putting p3testscript in same folder as mcfarlti_program3.c and using the following arguments:
-4a) ./p3testscript > mytestresults.txt 2>&1
+compile by using: gcc --std=gnu99 -g -o smallsh mcfarlti_program3.c
+
+There were a set of testscripts that were used to test the accuracy of the program, of it it passed 100% of tests
+
+Test script is available upon request
